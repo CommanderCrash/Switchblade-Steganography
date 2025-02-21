@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Steganography</title>
+<style>
+    :root {
+        --neon-pink: #ff2a6d;
+        --neon-blue: #00fff9;
+        --neon-purple: #8a2be2;
+        --dark-bg: #0a0a20;
+        --darker-bg: #050510;
+        --cyber-green: #39ff14;
+    }
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--dark-bg);
+        color: #fff;
+        margin: 0;
+        padding: 10px;
+        min-height: 100vh;
+        background: linear-gradient(45deg, var(--darker-bg), var(--dark-bg));
+        max-width: 600px;  /* Added max-width */
+        margin: 0 auto;    /* Center content */
+    }
+
+    .nav-tabs {
+        margin-bottom: 15px;
+        border-bottom: 1px solid var(--neon-blue);
+        display: flex;     /* Added flex display */
+        justify-content: center;
+    }
+
+    .nav-tabs a {
+        color: var(--neon-blue);
+        text-decoration: none;
+        font-size: 20px;   /* Reduced font size */
+        margin-right: 15px;
+        padding: 8px;      /* Reduced padding */
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        transition: all 0.3s ease;
+    }
+
+    .nav-tabs a.active {
+        color: var(--neon-pink);
+        border-bottom: 2px solid var(--neon-pink);
+        text-shadow: 0 0 10px var(--neon-pink);
+    }
+
+    .tab-content > div {
+        display: none;
+    }
+
+    .tab-content > div.active {
+        display: block;
+    }
+
+    .form-group {
+        margin-bottom: 15px;  /* Reduced margin */
+    }
+
+    label {
+        display: block;
+        margin-bottom: 6px;   /* Reduced margin */
+        color: var(--neon-blue);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.9em;
+    }
+
+    textarea, input[type="password"] {
+        width: 95%;          /* Reduced width */
+        padding: 8px;        /* Reduced padding */
+        background-color: var(--darker-bg);
+        border: 1px solid var(--neon-blue);
+        border-radius: 5px;
+        color: #fff;
+        margin-bottom: 8px;  /* Reduced margin */
+        font-size: 14px;     /* Reduced font size */
+        transition: all 0.3s ease;
+    }
+
+    textarea:focus, input[type="password"]:focus {
+        outline: none;
+        border-color: var(--neon-pink);
+        box-shadow: 0 0 15px rgba(255, 42, 109, 0.3);
+    }
+
+    textarea {
+        height: 120px;      /* Reduced height */
+        resize: vertical;
+    }
+
+    .image-preview {
+        width: 95%;         /* Reduced width */
+        height: 150px;      /* Reduced height */
+        background-color: var(--darker-bg);
+        border: 1px solid var(--neon-blue);
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .image-preview:hover {
+        box-shadow: 0 0 20px rgba(0, 255, 249, 0.2);
+    }
+
+    .image-preview img {
+        max-width: 100%;
+        max-height: 100%;
+    }
+
+    .image-placeholder {
+        width: 40px;       /* Reduced size */
+        height: 40px;
+        opacity: 0.5;
+        stroke: var(--neon-blue);
+    }
+
+    button {
+        padding: 8px 16px;  /* Reduced padding */
+        background-color: var(--darker-bg);
+        border: 1px solid var(--neon-blue);
+        color: var(--neon-blue);
+        border-radius: 5px;
+        cursor: pointer;
+        margin-right: 8px;  /* Reduced margin */
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+        font-size: 14px;    /* Added font size */
+    }
+
+    button:hover {
+        background-color: var(--neon-blue);
+        color: var(--darker-bg);
+        box-shadow: 0 0 15px rgba(0, 255, 249, 0.4);
+    }
+
+    .file-input-wrapper {
+        margin-bottom: 15px;
+    }
+
+    .file-input-wrapper input[type="file"] {
+        color: var(--neon-blue);
+        max-width: 100%;    /* Added max-width */
+    }
+
+    .preview-section {
+        margin-top: 15px;   /* Reduced margin */
+    }
+
+    #decrypted-message {
+        background-color: rgba(10, 10, 32, 0.8);
+        border: 1px solid var(--neon-purple);
+    }
+</style>
+</head>
+<body>
+    <div class="nav-tabs">
+        <a href="#lock" class="active">Lock</a>
+        <a href="#unlock">Unlock</a>
+    </div>
+            <div class="form-group">
+                <label for="cover-image">Image</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="cover-image" accept="image/jpeg, image/png, image/gif, image/bmp">
+                </div>
+            </div>
+                <div class="tab-content">
+        <div id="lock" class="active">
+            <div class="form-group">
+                <label for="message">Message</label>
+                <textarea id="message" name="message"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="lock-password">Password</label>
+                <input type="password" id="lock-password">
+            </div>
+            <div class="preview-section">
+                <label>Preview Image</label>
+                <div class="image-preview">
+                    <svg class="image-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                </div>
+            </div>
+            <div class="preview-section">
+                <label>Encoded Image</label>
+                <div class="image-preview">
+                    <svg class="image-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                </div>
+            </div>
+            <button id="lock-btn">Lock</button>
+            <button id="save-btn">Save</button>
+        </div>
+        <div id="unlock">
+            <div class="form-group">
+                <label for="encoded-image">Encoded Image</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="encoded-image" accept="image/jpeg, image/png, image/gif, image/bmp">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="unlock-password">Password</label>
+                <input type="password" id="unlock-password">
+            </div>
+            <div class="preview-section">
+                <label>Preview Image</label>
+                <div class="image-preview">
+                    <svg class="image-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                </div>
+            </div>
+            <div class="preview-section">
+                <label>Decrypted Message</label>
+                <textarea id="decrypted-message" readonly></textarea>
+            </div>
+            <button id="unlock-btn">Unlock</button>
+            <button id="copy-btn">Copy</button>
+        </div>
+    </div>
+            <script>
+        // Tab switching
+        document.querySelectorAll('.nav-tabs a').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.nav-tabs a').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content > div').forEach(d => d.classList.remove('active'));
+                tab.classList.add('active');
+                document.querySelector(tab.getAttribute('href')).classList.add('active');
+            });
+        });
+        // Image preview functionality
+        function handleImagePreview(input, previewContainer) {
+            input.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        previewContainer.innerHTML = '';
+                        previewContainer.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+// Lock functionality
+document.getElementById('lock-btn').addEventListener('click', async () => {
+    console.log('Lock button clicked');
+    const formData = new FormData();
+    const message = document.getElementById('message').value;
+    const image = document.getElementById('cover-image').files[0];
+    const password = document.getElementById('lock-password').value;
+
+    if (!message || !image || !password) {
+        alert('Please fill in all fields');
+        return;
+    }
+
+    formData.append('message', message);
+    formData.append('image', image);
+    formData.append('password', password);
+            try {
+                const response = await fetch('/lock', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const encodedImageUrl = URL.createObjectURL(blob);
+                    // Display encoded image in the preview
+                    const encodedPreview = document.querySelector('#lock .preview-section:last-of-type .image-preview');
+                    console.log('Found preview container:', encodedPreview);
+                    const img = document.createElement('img');
+                    img.src = encodedImageUrl;
+                    console.log('Created new image with URL:', encodedImageUrl);
+                    encodedPreview.innerHTML = '';
+                    encodedPreview.appendChild(img);
+                    // Store the blob for save functionality
+                    window.encodedImageBlob = blob;
+                } else {
+                    const error = await response.text();
+                    alert('Error: ' + error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+        // Save functionality
+        document.getElementById('save-btn').addEventListener('click', () => {
+            if (window.encodedImageBlob) {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(window.encodedImageBlob);
+                a.download = 'encoded_image.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } else {
+                alert('Please lock an image first');
+            }
+        });
+// Unlock functionality
+document.getElementById('unlock-btn').addEventListener('click', async () => {
+    const formData = new FormData();
+    const image = document.getElementById('encoded-image').files[0];
+    const password = document.getElementById('unlock-password').value;
+
+    if (!image || !password) {
+        alert('Please fill in all fields');
+        return;
+    }
+
+    formData.append('image', image);
+    formData.append('password', password);
+            try {
+                const response = await fetch('/unlock', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('decrypted-message').value = data.message;
+                } else {
+                    const error = await response.text();
+                    alert('Error: ' + error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+        // Copy functionality
+        document.getElementById('copy-btn').addEventListener('click', () => {
+            const decryptedMessage = document.getElementById('decrypted-message');
+            decryptedMessage.select();
+            document.execCommand('copy');
+            alert('Message copied to clipboard!');
+        });
+        // Set up image preview handlers
+        handleImagePreview(
+            document.getElementById('cover-image'),
+            document.querySelector('#lock .image-preview:first-of-type')
+        );
+        handleImagePreview(
+            document.getElementById('encoded-image'),
+            document.querySelector('#unlock .image-preview')
+        );
+    </script>
+</body>
+</html>
