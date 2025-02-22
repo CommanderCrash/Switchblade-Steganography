@@ -4,7 +4,7 @@ Switchblade Steganography: A comprehensive web-based steganography toolkit for d
 Key features:
 - Emoji/text steganography using variation selectors
 - Password-protected message hiding in images
-- File hiding within carrier images (supports PNG, JPG, GIF)
+- File hiding within carrier images (supports most image file types like jpg,png,bmp etc...)
 - AES encryption for secure message encoding
 - Modern, responsive UI with real-time previews
 - LSB (Least Significant Bit) steganography implementation
