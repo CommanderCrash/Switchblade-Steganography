@@ -3,365 +3,724 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Steganography</title>
-<style>
-    :root {
-        --neon-pink: #ff2a6d;
-        --neon-blue: #00fff9;
-        --neon-purple: #8a2be2;
-        --dark-bg: #0a0a20;
-        --darker-bg: #050510;
-        --cyber-green: #39ff14;
-    }
+    <title>Steganography Tools</title>
+    <style>
+        :root {
+            --neon-pink: #ff2a6d;
+            --neon-blue: #00fff9;
+            --neon-purple: #8a2be2;
+            --dark-bg: #0a0a20;
+            --darker-bg: #050510;
+            --cyber-green: #39ff14;
+        }
 
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background-color: var(--dark-bg);
-        color: #fff;
-        margin: 0;
-        padding: 10px;
-        min-height: 100vh;
-        background: linear-gradient(45deg, var(--darker-bg), var(--dark-bg));
-        max-width: 600px;  /* Added max-width */
-        margin: 0 auto;    /* Center content */
-    }
+        @keyframes flicker {
+            0%, 19.999%, 22%, 62.999%, 64%, 64.999%, 70%, 100% {
+                opacity: 1;
+            }
+            20%, 21.999%, 63%, 63.999%, 65%, 69.999% {
+                opacity: 0.4;
+            }
+        }
 
-    .nav-tabs {
-        margin-bottom: 15px;
-        border-bottom: 1px solid var(--neon-blue);
-        display: flex;     /* Added flex display */
-        justify-content: center;
-    }
+        @keyframes glow {
+            0% {
+                box-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue);
+            }
+            100% {
+                box-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+            }
+        }
 
-    .nav-tabs a {
-        color: var(--neon-blue);
-        text-decoration: none;
-        font-size: 20px;   /* Reduced font size */
-        margin-right: 15px;
-        padding: 8px;      /* Reduced padding */
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        transition: all 0.3s ease;
-    }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--dark-bg);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            background: linear-gradient(45deg, var(--darker-bg), var(--dark-bg));
+        }
 
-    .nav-tabs a.active {
-        color: var(--neon-pink);
-        border-bottom: 2px solid var(--neon-pink);
-        text-shadow: 0 0 10px var(--neon-pink);
-    }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid var(--neon-blue);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 249, 0.2);
+            background: rgba(10, 10, 32, 0.9);
+        }
 
-    .tab-content > div {
-        display: none;
-    }
+        h1 {
+            color: var(--neon-pink);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+            animation: flicker 3s infinite;
+            text-shadow: 0 0 10px var(--neon-pink);
+        }
 
-    .tab-content > div.active {
-        display: block;
-    }
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
 
-    .form-group {
-        margin-bottom: 15px;  /* Reduced margin */
-    }
+        .tab-button {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: glow 2s infinite alternate;
+            border-radius: 5px;
+        }
 
-    label {
-        display: block;
-        margin-bottom: 6px;   /* Reduced margin */
-        color: var(--neon-blue);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-size: 0.9em;
-    }
+        .tab-button.active {
+            background: var(--neon-blue);
+            color: var(--darker-bg);
+        }
 
-    textarea, input[type="password"] {
-        width: 95%;          /* Reduced width */
-        padding: 8px;        /* Reduced padding */
-        background-color: var(--darker-bg);
-        border: 1px solid var(--neon-blue);
-        border-radius: 5px;
-        color: #fff;
-        margin-bottom: 8px;  /* Reduced margin */
-        font-size: 14px;     /* Reduced font size */
-        transition: all 0.3s ease;
-    }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid var(--neon-blue);
+            border-radius: 5px;
+            margin-top: 20px;
+            animation: glow 2s infinite alternate;
+        }
 
-    textarea:focus, input[type="password"]:focus {
-        outline: none;
-        border-color: var(--neon-pink);
-        box-shadow: 0 0 15px rgba(255, 42, 109, 0.3);
-    }
+        .tab-content.active {
+            display: block;
+        }
 
-    textarea {
-        height: 120px;      /* Reduced height */
-        resize: vertical;
-    }
+        .sub-tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid var(--neon-blue);
+            border-radius: 5px;
+            margin-top: 20px;
+        }
 
-    .image-preview {
-        width: 95%;         /* Reduced width */
-        height: 150px;      /* Reduced height */
-        background-color: var(--darker-bg);
-        border: 1px solid var(--neon-blue);
-        border-radius: 5px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 15px;
-        transition: all 0.3s ease;
-    }
+        .sub-tab-content.active {
+            display: block;
+        }
 
-    .image-preview:hover {
-        box-shadow: 0 0 20px rgba(0, 255, 249, 0.2);
-    }
+        .input-group {
+            margin-bottom: 20px;
+        }
 
-    .image-preview img {
-        max-width: 100%;
-        max-height: 100%;
-    }
+        .label {
+            display: block;
+            color: var(--neon-blue);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9em;
+        }
 
-    .image-placeholder {
-        width: 40px;       /* Reduced size */
-        height: 40px;
-        opacity: 0.5;
-        stroke: var(--neon-blue);
-    }
+        input[type="text"],
+        input[type="password"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            background: var(--darker-bg);
+            border: 1px solid var(--neon-blue);
+            color: #fff;
+            border-radius: 5px;
+            margin-top: 5px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
 
-    button {
-        padding: 8px 16px;  /* Reduced padding */
-        background-color: var(--darker-bg);
-        border: 1px solid var(--neon-blue);
-        color: var(--neon-blue);
-        border-radius: 5px;
-        cursor: pointer;
-        margin-right: 8px;  /* Reduced margin */
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        transition: all 0.3s ease;
-        font-size: 14px;    /* Added font size */
-    }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
 
-    button:hover {
-        background-color: var(--neon-blue);
-        color: var(--darker-bg);
-        box-shadow: 0 0 15px rgba(0, 255, 249, 0.4);
-    }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
 
-    .file-input-wrapper {
-        margin-bottom: 15px;
-    }
+        .button {
+            padding: 12px 24px;
+            background: transparent;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
 
-    .file-input-wrapper input[type="file"] {
-        color: var(--neon-blue);
-        max-width: 100%;    /* Added max-width */
-    }
+        .button:hover {
+            background: var(--neon-blue);
+            color: var(--darker-bg);
+            box-shadow: 0 0 15px var(--neon-blue);
+        }
 
-    .preview-section {
-        margin-top: 15px;   /* Reduced margin */
-    }
+        .preview-container {
+            margin: 20px 0;
+            text-align: center;
+            border: 1px dashed var(--neon-blue);
+            padding: 10px;
+            border-radius: 5px;
+        }
 
-    #decrypted-message {
-        background-color: rgba(10, 10, 32, 0.8);
-        border: 1px solid var(--neon-purple);
-    }
-</style>
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 5px;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+            font-weight: bold;
+            text-align: center;
+            word-break: break-word;
+        }
+
+        .result.success {
+            display: block;
+            border: 1px solid var(--cyber-green);
+            color: var(--cyber-green);
+            background: rgba(57, 255, 20, 0.1);
+        }
+
+        .result.error {
+            display: block;
+            border: 1px solid var(--neon-pink);
+            color: var(--neon-pink);
+            background: rgba(255, 42, 109, 0.1);
+        }
+
+        .file-input {
+            width: 100%;
+            position: relative;
+        }
+
+        .file-input input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            background: var(--darker-bg);
+            border: 1px solid var(--neon-blue);
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 10px 0;
+            color: var(--neon-blue);
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .download-link {
+            display: inline-block;
+            margin-top: 10px;
+            color: var(--cyber-green);
+            text-decoration: none;
+            padding: 5px 10px;
+            border: 1px solid var(--cyber-green);
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .download-link:hover {
+            background: var(--cyber-green);
+            color: var(--darker-bg);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            .tab-container {
+                flex-direction: column;
+            }
+            .button-group {
+                flex-direction: column;
+            }
+            .button {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="nav-tabs">
-        <a href="#lock" class="active">Lock</a>
-        <a href="#unlock">Unlock</a>
-    </div>
-            <div class="form-group">
-                <label for="cover-image">Image</label>
-                <div class="file-input-wrapper">
-                    <input type="file" id="cover-image" accept="image/jpeg, image/png, image/gif, image/bmp">
-                </div>
-            </div>
-                <div class="tab-content">
-        <div id="lock" class="active">
-            <div class="form-group">
-                <label for="message">Message</label>
-                <textarea id="message" name="message"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="lock-password">Password</label>
-                <input type="password" id="lock-password">
-            </div>
-            <div class="preview-section">
-                <label>Preview Image</label>
-                <div class="image-preview">
-                    <svg class="image-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                        <polyline points="21 15 16 10 5 21"></polyline>
-                    </svg>
-                </div>
-            </div>
-            <div class="preview-section">
-                <label>Encoded Image</label>
-                <div class="image-preview">
-                    <svg class="image-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                        <polyline points="21 15 16 10 5 21"></polyline>
-                    </svg>
-                </div>
-            </div>
-            <button id="lock-btn">Lock</button>
-            <button id="save-btn">Save</button>
+    <div class="container">
+        <h1>Switchblade Steganography</h1>
+
+        <div class="tab-container">
+            <button class="tab-button active" onclick="switchTab('emoji')">Emoji/Character</button>
+            <button class="tab-button" onclick="switchTab('image')">Image Message</button>
+            <button class="tab-button" onclick="switchTab('file')">Hide File</button>
         </div>
-        <div id="unlock">
-            <div class="form-group">
-                <label for="encoded-image">Encoded Image</label>
-                <div class="file-input-wrapper">
-                    <input type="file" id="encoded-image" accept="image/jpeg, image/png, image/gif, image/bmp">
+
+        <!-- Emoji Steganography Tab -->
+        <div id="emoji-tab" class="tab-content active">
+            <div class="tab-container">
+                <button class="tab-button active" onclick="switchSubTab('emoji', 'encode')">Encode</button>
+                <button class="tab-button" onclick="switchSubTab('emoji', 'decode')">Decode</button>
+            </div>
+
+            <div id="emoji-encode-tab" class="sub-tab-content active">
+                <div class="input-group">
+                    <label class="label">Carrier Emoji/Character</label>
+                    <input type="text" id="emoji-carrier-encode" placeholder="Enter an emoji or character">
                 </div>
-            </div>
-            <div class="form-group">
-                <label for="unlock-password">Password</label>
-                <input type="password" id="unlock-password">
-            </div>
-            <div class="preview-section">
-                <label>Preview Image</label>
-                <div class="image-preview">
-                    <svg class="image-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                        <polyline points="21 15 16 10 5 21"></polyline>
-                    </svg>
+                <div class="input-group">
+                    <label class="label">Message</label>
+                    <textarea id="emoji-message" placeholder="Enter your message to hide"></textarea>
                 </div>
+                <div class="button-group">
+                    <button class="button" onclick="encodeEmoji()">Encode</button>
+                </div>
+                <div id="emoji-encode-result" class="result"></div>
             </div>
-            <div class="preview-section">
-                <label>Decrypted Message</label>
-                <textarea id="decrypted-message" readonly></textarea>
+
+            <div id="emoji-decode-tab" class="sub-tab-content">
+                <div class="input-group">
+                    <label class="label">Encoded Text</label>
+                    <input type="text" id="emoji-carrier-decode" placeholder="Enter the encoded text">
+                </div>
+                <div class="button-group">
+                    <button class="button" onclick="decodeEmoji()">Decode</button>
+                </div>
+                <div id="emoji-decode-result" class="result"></div>
             </div>
-            <button id="unlock-btn">Unlock</button>
-            <button id="copy-btn">Copy</button>
+        </div>
+
+        <!-- Image Message Tab -->
+        <div id="image-tab" class="tab-content">
+            <div class="tab-container">
+                <button class="tab-button active" onclick="switchSubTab('image', 'encode')">Encode</button>
+                <button class="tab-button" onclick="switchSubTab('image', 'decode')">Decode</button>
+            </div>
+
+            <div id="image-encode-tab" class="sub-tab-content active">
+                <div class="input-group">
+                    <label class="label">Image</label>
+                    <input type="file" accept="image/*" id="image-file-encode" class="file-input">
+                </div>
+                <div class="input-group">
+                    <label class="label">Message</label>
+                    <textarea id="image-message" placeholder="Enter your message to hide"></textarea>
+                </div>
+                <div class="input-group">
+                    <label class="label">Password</label>
+                    <input type="password" id="image-password-encode">
+                </div>
+                <div class="preview-container" style="display: flex; gap: 20px; justify-content: center;">
+                    <div>
+                        <div class="label">Encoded Image</div>
+                        <img id="image-preview-encode-result" class="preview-image" style="display: none;">
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button class="button" onclick="encodeImage()">Encode</button>
+                </div>
+                <div id="image-encode-result" class="result"></div>
+            </div>
+
+            <div id="image-decode-tab" class="sub-tab-content">
+                <div class="input-group">
+                    <label class="label">Encoded Image</label>
+                    <input type="file" accept="image/*" id="image-file-decode" class="file-input">
+                </div>
+                <div class="input-group">
+                    <label class="label">Password</label>
+                    <input type="password" id="image-password-decode">
+                </div>
+                <div class="preview-container">
+                    <img id="image-preview-decode" class="preview-image" style="display: none;">
+                </div>
+                <div class="button-group">
+                    <button class="button" onclick="decodeImage()">Decode</button>
+                </div>
+                <div id="image-decode-result" class="result"></div>
+            </div>
+        </div>
+
+        <!-- File in Image Tab -->
+        <div id="file-tab" class="tab-content">
+            <div class="tab-container">
+                <button class="tab-button active" onclick="switchSubTab('file', 'encode')">Encode</button>
+                <button class="tab-button" onclick="switchSubTab('file', 'decode')">Decode</button>
+            </div>
+
+            <div id="file-encode-tab" class="sub-tab-content active">
+<div class="input-group">
+    <label class="label">Carrier Image</label>
+    <input type="file" accept="image/jpeg,image/png" id="carrier-file-encode" class="file-input">
+</div>
+                <div class="input-group">
+                    <label class="label">File to Hide</label>
+                    <input type="file" id="hide-file" class="file-input">
+                </div>
+                <div class="preview-container" style="display: flex; gap: 20px; justify-content: center;">
+                    <div>
+                        <div class="label">Original Image</div>
+                        <img id="file-preview-encode-original" class="preview-image" style="display: none;">
+                    </div>
+                    <div>
+                        <div class="label">Encoded Image</div>
+                        <img id="file-preview-encode-result" class="preview-image" style="display: none;">
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button class="button" onclick="encodeFile()">Encode</button>
+                </div>
+                <div id="file-encode-result" class="result"></div>
+            </div>
+
+            <div id="file-decode-tab" class="sub-tab-content">
+                <div class="input-group">
+                    <label class="label">Encoded Image</label>
+                    <input type="file" accept="image/*" id="carrier-file-decode" class="file-input">
+                </div>
+                <div class="preview-container">
+                    <img id="file-preview-decode" class="preview-image" style="display: none;">
+                </div>
+                <div class="button-group">
+                    <button class="button" onclick="decodeFile()">Decode</button>
+                </div>
+                <div id="file-decode-result" class="result"></div>
+            </div>
         </div>
     </div>
-            <script>
+
+    <script>
         // Tab switching
-        document.querySelectorAll('.nav-tabs a').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                e.preventDefault();
-                document.querySelectorAll('.nav-tabs a').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content > div').forEach(d => d.classList.remove('active'));
-                tab.classList.add('active');
-                document.querySelector(tab.getAttribute('href')).classList.add('active');
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            document.querySelector(`button[onclick="switchTab('${tabName}')"]`).classList.add('active');
+
+            // Show encode sub-tab by default
+            switchSubTab(tabName, 'encode');
+        }
+
+        function switchSubTab(tabName, subTabName) {
+            const tabContent = document.getElementById(`${tabName}-tab`);
+
+            // Update sub-tab buttons
+            tabContent.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            tabContent.querySelector(`button[onclick="switchSubTab('${tabName}', '${subTabName}')"]`).classList.add('active');
+
+            // Update sub-tab content
+            tabContent.querySelectorAll('.sub-tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(`${tabName}-${subTabName}-tab`).classList.add('active');
+        }
+
+        // Clear form data on page refresh
+        window.onload = function() {
+            document.querySelectorAll('input, textarea').forEach(input => {
+                input.value = '';
             });
-        });
+            document.querySelectorAll('.result').forEach(result => {
+                result.style.display = 'none';
+            });
+            document.querySelectorAll('.preview-image').forEach(img => {
+                img.style.display = 'none';
+            });
+        };
+
         // Image preview functionality
-        function handleImagePreview(input, previewContainer) {
-            input.addEventListener('change', (e) => {
+        function setupImagePreview(inputId, previewId) {
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+
+            input.addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (file) {
                     const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        previewContainer.innerHTML = '';
-                        previewContainer.appendChild(img);
+                    reader.onload = function(e) {
+                        preview.src = e.target.result;
+                        preview.style.display = 'block';
                     };
                     reader.readAsDataURL(file);
                 }
             });
         }
-// Lock functionality
-document.getElementById('lock-btn').addEventListener('click', async () => {
-    console.log('Lock button clicked');
-    const formData = new FormData();
-    const message = document.getElementById('message').value;
-    const image = document.getElementById('cover-image').files[0];
-    const password = document.getElementById('lock-password').value;
 
-    if (!message || !image || !password) {
-        alert('Please fill in all fields');
-        return;
-    }
+        // Set up preview for carrier file and hide file
+        document.getElementById('carrier-file-encode').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('file-preview-encode-original');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
 
-    formData.append('message', message);
-    formData.append('image', image);
-    formData.append('password', password);
+        document.getElementById('carrier-file-decode').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('file-preview-decode');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Show result function
+        function showResult(elementId, message, isError = false) {
+            const result = document.getElementById(elementId);
+            result.textContent = message;
+            result.style.display = 'block';
+            result.className = `result ${isError ? 'error' : 'success'}`;
+        }
+
+        // Emoji Steganography Functions
+        async function encodeEmoji() {
+            const carrier = document.getElementById('emoji-carrier-encode').value;
+            const message = document.getElementById('emoji-message').value;
+
             try {
-                const response = await fetch('/lock', {
+                const response = await fetch('/encode_emoji', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ carrier, message })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showResult('emoji-encode-result', `Encoded Result: ${data.result}`);
+                } else {
+                    showResult('emoji-result', data.error, true);
+                }
+            } catch (error) {
+                showResult('emoji-result', 'An error occurred during encoding', true);
+            }
+        }
+
+        async function decodeEmoji() {
+            const text = document.getElementById('emoji-carrier-decode').value;
+
+            try {
+                const response = await fetch('/decode_emoji', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showResult('emoji-decode-result', `Decoded Message: ${data.result}`);
+                } else {
+                    showResult('emoji-result', data.error, true);
+                }
+            } catch (error) {
+                showResult('emoji-result', 'An error occurred during decoding', true);
+            }
+        }
+
+        // Image Message Steganography Functions
+        async function encodeImage() {
+            const imageFile = document.getElementById('image-file-encode').files[0];
+            const message = document.getElementById('image-message').value;
+            const password = document.getElementById('image-password-encode').value;
+            const resultDiv = document.getElementById('image-encode-result');
+
+            if (!imageFile || !message || !password) {
+                showResult('image-encode-result', 'Please provide all required fields', true);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', imageFile);
+            formData.append('message', message);
+            formData.append('password', password);
+
+            try {
+                const response = await fetch('/encode_image_message', {
                     method: 'POST',
                     body: formData
                 });
+
                 if (response.ok) {
                     const blob = await response.blob();
-                    const encodedImageUrl = URL.createObjectURL(blob);
-                    // Display encoded image in the preview
-                    const encodedPreview = document.querySelector('#lock .preview-section:last-of-type .image-preview');
-                    console.log('Found preview container:', encodedPreview);
-                    const img = document.createElement('img');
-                    img.src = encodedImageUrl;
-                    console.log('Created new image with URL:', encodedImageUrl);
-                    encodedPreview.innerHTML = '';
-                    encodedPreview.appendChild(img);
-                    // Store the blob for save functionality
-                    window.encodedImageBlob = blob;
+                    const url = window.URL.createObjectURL(blob);
+
+                    // Show encoded image preview
+                    const preview = document.getElementById('image-preview-encode-result');
+                    preview.src = url;
+                    preview.style.display = 'block';
+
+                    // Create download link
+                    const resultMessage = `
+                        <div>Image encoded successfully!</div>
+                        <div style="margin-top: 10px;">
+                            <a href="${url}" download="encoded_image.png" class="download-link">
+                                Download Encoded Image
+                            </a>
+                        </div>
+                    `;
+                    resultDiv.innerHTML = resultMessage;
+                    resultDiv.className = 'result success';
                 } else {
-                    const error = await response.text();
-                    alert('Error: ' + error);
+                    const data = await response.json();
+                    showResult('image-encode-result', data.error || 'Encoding failed', true);
                 }
             } catch (error) {
-                alert('Error: ' + error.message);
+                console.error('Image encoding error:', error);
+                showResult('image-encode-result', 'An error occurred during encoding: ' + error.message, true);
             }
-        });
-        // Save functionality
-        document.getElementById('save-btn').addEventListener('click', () => {
-            if (window.encodedImageBlob) {
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(window.encodedImageBlob);
-                a.download = 'encoded_image.png';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            } else {
-                alert('Please lock an image first');
+        }
+
+        async function decodeImage() {
+            const imageFile = document.getElementById('image-file-decode').files[0];
+            const password = document.getElementById('image-password-decode').value;
+
+            if (!imageFile || !password) {
+                showResult('image-decode-result', 'Please provide an image and password', true);
+                return;
             }
-        });
-// Unlock functionality
-document.getElementById('unlock-btn').addEventListener('click', async () => {
-    const formData = new FormData();
-    const image = document.getElementById('encoded-image').files[0];
-    const password = document.getElementById('unlock-password').value;
 
-    if (!image || !password) {
-        alert('Please fill in all fields');
-        return;
-    }
+            const formData = new FormData();
+            formData.append('image', imageFile);
+            formData.append('password', password);
 
-    formData.append('image', image);
-    formData.append('password', password);
             try {
-                const response = await fetch('/unlock', {
+                const response = await fetch('/decode_image_message', {
                     method: 'POST',
                     body: formData
                 });
+
+                const data = await response.json();
                 if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('decrypted-message').value = data.message;
+                    showResult('image-decode-result', `Decoded Message: ${data.message}`);
                 } else {
-                    const error = await response.text();
-                    alert('Error: ' + error);
+                    showResult('image-decode-result', data.error, true);
                 }
             } catch (error) {
-                alert('Error: ' + error.message);
+                showResult('image-result', 'An error occurred during decoding', true);
             }
-        });
-        // Copy functionality
-        document.getElementById('copy-btn').addEventListener('click', () => {
-            const decryptedMessage = document.getElementById('decrypted-message');
-            decryptedMessage.select();
-            document.execCommand('copy');
-            alert('Message copied to clipboard!');
-        });
-        // Set up image preview handlers
-        handleImagePreview(
-            document.getElementById('cover-image'),
-            document.querySelector('#lock .image-preview:first-of-type')
-        );
-        handleImagePreview(
-            document.getElementById('encoded-image'),
-            document.querySelector('#unlock .image-preview')
-        );
+        }
+
+        // File in Image Steganography Functions
+        async function encodeFile() {
+            const carrierFile = document.getElementById('carrier-file-encode').files[0];
+            const fileToHide = document.getElementById('hide-file').files[0];
+
+            if (!carrierFile || !fileToHide) {
+                showResult('file-encode-result', 'Please provide both carrier image and file to hide', true);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('carrier', carrierFile);
+            formData.append('file', fileToHide);
+
+            try {
+                const response = await fetch('/encode_file', {  // Fixed route
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    const resultMessage = `
+                        File encoded successfully!<br>
+                        Original file: ${data.originalFile}<br>
+                        File size: ${data.fileSize} bytes<br>
+                        Bits used: ${data.bitsUsed}<br>
+                        Bits available: ${data.bitsAvailable}
+                    `;
+                    showResult('file-encode-result', resultMessage);
+
+                    // Display encoded image
+                    const preview = document.getElementById('file-preview-encode-result');
+                    preview.src = `data:image/png;base64,${data.image}`;
+                    preview.style.display = 'block';
+                } else {
+                    showResult('file-encode-result', data.error, true);
+                }
+            } catch (error) {
+                    showResult('file-encode-result', 'An error occurred during encoding: ' + (error.message || 'Unknown error'), true);
+                    console.error('Encoding error:', error);
+            }
+        }
+
+        async function decodeFile() {
+            const imageFile = document.getElementById('carrier-file-decode').files[0];
+            const resultDiv = document.getElementById('file-decode-result');
+
+            if (!imageFile) {
+                showResult('file-decode-result', 'Please provide an encoded image', true);
+                return;
+            }
+
+            // Show loading state
+            resultDiv.innerHTML = 'Decoding in progress... Please wait...';
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+
+            const formData = new FormData();
+            formData.append('image', imageFile);
+
+            try {
+                console.log('Starting file decode request...');
+                const response = await fetch('/decode_file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (response.ok && data.success) {
+                    const resultMessage = `
+                        <div>File decoded successfully!</div>
+                        <div>File size: ${data.fileSize} bytes</div>
+                        <div style="margin-top: 10px;">
+                            <a href="${data.downloadPath}" class="download-link">Download Decoded File</a>
+                        </div>
+                    `;
+                    resultDiv.innerHTML = resultMessage;
+                    resultDiv.className = 'result success';
+                } else {
+                    showResult('file-decode-result', data.error || 'Decoding failed', true);
+                }
+            } catch (error) {
+                console.error('File decoding error:', error);
+                showResult('file-decode-result', 'An error occurred during decoding: ' + error.message, true);
+            }
+        }
     </script>
 </body>
 </html>
