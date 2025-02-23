@@ -96,7 +96,7 @@ def decode_emoji_message(text: str) -> str:
 # Image message steganography class
 class ImageMessageSteg:
     @staticmethod
-    def encode(image: Image.Image, message: str, password: str) -> Image.Image:
+    def encode(image: Image.Image, message: str, password: str = None) -> Image.Image:
         try:
             if image.mode != 'RGBA':
                 image = image.convert('RGBA')
@@ -104,17 +104,22 @@ class ImageMessageSteg:
             pixels = np.array(image)
             height, width = pixels.shape[:2]
 
-            key = SHA256.new(password.encode()).digest()
-            cipher = AES.new(key, AES.MODE_CBC)
-            pad_length = 16 - (len(message.encode()) % 16)
-            padded_message = message.encode() + bytes([pad_length] * pad_length)
-            encrypted = cipher.encrypt(padded_message)
+            # Handle message preparation based on password presence
+            if password:
+                # Encrypted mode
+                key = SHA256.new(password.encode()).digest()
+                cipher = AES.new(key, AES.MODE_CBC)
+                pad_length = 16 - (len(message.encode()) % 16)
+                padded_message = message.encode() + bytes([pad_length] * pad_length)
+                encrypted = cipher.encrypt(padded_message)
+                iv_b64 = base64.b64encode(cipher.iv).decode('utf-8')
+                ct_b64 = base64.b64encode(encrypted).decode('utf-8')
+                ciphertext = f"{iv_b64}:{ct_b64}"
+                formatted_msg = f"-----BEGIN ENCRYPTED-----|{len(ciphertext)}|{ciphertext}"
+            else:
+                # Unencrypted mode
+                formatted_msg = f"-----BEGIN PLAIN-----|{len(message)}|{message}"
 
-            iv_b64 = base64.b64encode(cipher.iv).decode('utf-8')
-            ct_b64 = base64.b64encode(encrypted).decode('utf-8')
-            ciphertext = f"{iv_b64}:{ct_b64}"
-
-            formatted_msg = f"-----BEGIN MESSAGE-----|{len(ciphertext)}|{ciphertext}"
             binary_message = ''.join(format(ord(char), '08b') for char in formatted_msg)
 
             if len(binary_message) > width * height * 3:
@@ -140,7 +145,7 @@ class ImageMessageSteg:
             raise
 
     @staticmethod
-    def decode(image: Image.Image, password: str) -> str:
+    def decode(image: Image.Image, password: str = None) -> str:
         try:
             if image.mode != 'RGBA':
                 image = image.convert('RGBA')
@@ -151,35 +156,51 @@ class ImageMessageSteg:
             text = ''.join(chr(int(binary[i:i+8], 2)) for i in range(0, len(binary), 8)
                           if i + 8 <= len(binary))
 
-            if not text.startswith("-----BEGIN MESSAGE-----"):
-                return "Message not found in the image"
+            # Check message type
+            if text.startswith("-----BEGIN ENCRYPTED-----"):
+                if not password:
+                    return "This message is encrypted. Please provide a password to decrypt."
 
-            parts = text.split("|")
-            if len(parts) < 3:
-                return "Message not found in the image"
+                try:
+                    parts = text.split("|")
+                    if len(parts) < 3:
+                        return "Invalid message format"
 
-            try:
-                message_length = int(parts[1])
-                encrypted_message = parts[2][:message_length]
+                    message_length = int(parts[1])
+                    encrypted_message = parts[2][:message_length]
+                    iv_b64, ct_b64 = encrypted_message.split(':')
+                    iv = base64.b64decode(iv_b64)
+                    ct = base64.b64decode(ct_b64)
 
-                iv_b64, ct_b64 = encrypted_message.split(':')
-                iv = base64.b64decode(iv_b64)
-                ct = base64.b64decode(ct_b64)
+                    key = SHA256.new(password.encode()).digest()
+                    cipher = AES.new(key, AES.MODE_CBC, iv)
+                    decrypted = cipher.decrypt(ct)
 
-                key = SHA256.new(password.encode()).digest()
-                cipher = AES.new(key, AES.MODE_CBC, iv)
-                decrypted = cipher.decrypt(ct)
+                    padding_length = decrypted[-1]
+                    message = decrypted[:-padding_length].decode()
+                    return message
+                except Exception as e:
+                    logger.error(f"Image message decryption error: {e}")
+                    return "Invalid password or corrupted message"
 
-                padding_length = decrypted[-1]
-                message = decrypted[:-padding_length].decode()
+            elif text.startswith("-----BEGIN PLAIN-----"):
+                try:
+                    parts = text.split("|")
+                    if len(parts) < 3:
+                        return "Invalid message format"
 
-                return message
-            except Exception as e:
-                logger.error(f"Image message decryption error: {e}")
-                return "Invalid password or corrupted message"
+                    message_length = int(parts[1])
+                    message = parts[2][:message_length]
+                    return message
+                except Exception as e:
+                    logger.error(f"Error decoding plain message: {e}")
+                    return "Error decoding message"
+
+            return "No message found in the image"
+
         except Exception as e:
             logger.error(f"Image message decoding error: {e}")
-            return "Message not found in the image"
+            return "Failed to decode message from image"
 
 # File in image steganography class
 class LSBSteg:
@@ -370,15 +391,14 @@ def encode_image_message():
 
         image_file = request.files['image']
         message = request.form.get('message', '')
-        password = request.form.get('password', '')
+        password = request.form.get('password', '')  # Password is now optional
 
         if not message:
             return jsonify({'error': 'No message provided'}), 400
-        if not password:
-            return jsonify({'error': 'Password is required'}), 400
 
         image = Image.open(image_file)
-        stego_image = ImageMessageSteg.encode(image, message, password)
+        # Pass password only if it's not empty
+        stego_image = ImageMessageSteg.encode(image, message, password if password else None)
 
         img_buffer = io.BytesIO()
         stego_image.save(img_buffer, format='PNG', optimize=False)
@@ -400,13 +420,11 @@ def decode_image_message():
             return jsonify({'error': 'No image file uploaded'}), 400
 
         image_file = request.files['image']
-        password = request.form.get('password', '')
-
-        if not password:
-            return jsonify({'error': 'Password is required'}), 400
+        password = request.form.get('password', '')  # Password is now optional
 
         stego_image = Image.open(image_file)
-        message = ImageMessageSteg.decode(stego_image, password)
+        # Pass password only if it's not empty
+        message = ImageMessageSteg.decode(stego_image, password if password else None)
         return jsonify({'message': message})
     except Exception as e:
         return jsonify({'error': str(e)}), 400
