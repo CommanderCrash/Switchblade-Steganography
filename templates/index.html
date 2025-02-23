@@ -580,14 +580,14 @@
         }
 
         // Image Message Steganography Functions
-        async function encodeImage() {
+          async function encodeImage() {
             const imageFile = document.getElementById('image-file-encode').files[0];
             const message = document.getElementById('image-message').value;
             const password = document.getElementById('image-password-encode').value;
             const resultDiv = document.getElementById('image-encode-result');
 
-            if (!imageFile || !message || !password) {
-                showResult('image-encode-result', 'Please provide all required fields', true);
+            if (!imageFile || !message) {
+                showResult('image-encode-result', 'Please provide an image and message', true);
                 return;
             }
 
@@ -718,45 +718,59 @@ async function decodeEmoji() {
         }
 
         async function decodeImage() {
-            const imageFile = document.getElementById('image-file-decode').files[0];
-            const password = document.getElementById('image-password-decode').value;
-            const resultDiv = document.getElementById('image-decode-result');
+    const imageFile = document.getElementById('image-file-decode').files[0];
+    const password = document.getElementById('image-password-decode').value;
+    const resultDiv = document.getElementById('image-decode-result');
 
-            if (!imageFile || !password) {
-                showResult('image-decode-result', 'Please provide an image and password', true);
-                return;
+    if (!imageFile) {
+        showResult('image-decode-result', 'Please provide an image to decode', true);
+        return;
+    }
+
+    // Show loading state
+    resultDiv.innerHTML = `
+        <div class="loading-status">
+            <div class="status-message">Decoding image, please wait...</div>
+            <div class="loading-animation"></div>
+        </div>
+    `;
+    resultDiv.style.display = 'block';
+    resultDiv.className = 'result';
+
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    // Only append password if it's provided
+    if (password) {
+        formData.append('password', password);
+    }
+
+    try {
+        const response = await fetch('/decode_image_message', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Check if message indicates encryption
+            if (data.message === "This message is encrypted. Please provide a password to decrypt.") {
+                resultDiv.textContent = data.message;
+                resultDiv.className = 'result error';
+            } else {
+                resultDiv.textContent = data.message;
+                resultDiv.className = 'result success';
             }
-
-            // Show loading state
-            resultDiv.innerHTML = 'Decoding in progress... Be patient Large Images can take a few minutes...';
-            resultDiv.className = 'result';
-            resultDiv.style.display = 'block';
-
-            const formData = new FormData();
-            formData.append('image', imageFile);
-            formData.append('password', password);
-
-            try {
-                const response = await fetch('/decode_image_message', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-                if (response.ok) {
-                    // Create result div and set only the message
-                    const resultDiv = document.getElementById('image-decode-result');
-                    resultDiv.textContent = data.message;
-                    resultDiv.style.display = 'block';
-                    resultDiv.className = 'result success';
-                } else {
-                    showResult('image-decode-result', data.error || 'Failed to decode message', true);
-                }
-            } catch (error) {
-                console.error('Decoding error:', error);
-                showResult('image-decode-result', 'An error occurred during decoding', true);
-            }
+        } else {
+            resultDiv.textContent = data.error || 'Failed to decode message';
+            resultDiv.className = 'result error';
         }
+    } catch (error) {
+        console.error('Decoding error:', error);
+        resultDiv.textContent = 'An error occurred during decoding';
+        resultDiv.className = 'result error';
+    }
+}
 
         async function decodeFile() {
             const imageFile = document.getElementById('carrier-file-decode').files[0];
