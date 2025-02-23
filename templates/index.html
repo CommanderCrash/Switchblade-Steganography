@@ -274,6 +274,7 @@
             <button class="tab-button active" onclick="switchTab('emoji')">Emoji/Character</button>
             <button class="tab-button" onclick="switchTab('image')">Image Message</button>
             <button class="tab-button" onclick="switchTab('file')">Hide File</button>
+            <button class="tab-button" onclick="switchTab('audio')">Audio Message</button>
         </div>
 
         <!-- Emoji Steganography Tab -->
@@ -330,11 +331,9 @@
                     <label class="label">Password</label>
                     <input type="password" id="image-password-encode">
                 </div>
-                <div class="preview-container" style="display: flex; gap: 20px; justify-content: center;">
-                    <div>
-                        <div class="label">Encoded Image</div>
-                        <img id="image-preview-encode-result" class="preview-image" style="display: none;">
-                    </div>
+                <div class="preview-container">
+                    <div class="label">Encoded Image</div>
+                    <img id="image-preview-encode-result" class="preview-image" style="display: none;">
                 </div>
                 <div class="button-group">
                     <button class="button" onclick="encodeImage()">Encode</button>
@@ -369,10 +368,10 @@
             </div>
 
             <div id="file-encode-tab" class="sub-tab-content active">
-<div class="input-group">
-    <label class="label">Carrier Image</label>
-    <input type="file" accept="image/jpeg,image/png" id="carrier-file-encode" class="file-input">
-</div>
+                <div class="input-group">
+                    <label class="label">Carrier Image</label>
+                    <input type="file" accept="image/jpeg,image/png" id="carrier-file-encode" class="file-input">
+                </div>
                 <div class="input-group">
                     <label class="label">File to Hide</label>
                     <input type="file" id="hide-file" class="file-input">
@@ -405,6 +404,54 @@
                     <button class="button" onclick="decodeFile()">Decode</button>
                 </div>
                 <div id="file-decode-result" class="result"></div>
+            </div>
+        </div>
+
+        <!-- Audio Message Tab -->
+        <div id="audio-tab" class="tab-content">
+            <div class="tab-container">
+                <button class="tab-button active" onclick="switchSubTab('audio', 'encode')">Encode</button>
+                <button class="tab-button" onclick="switchSubTab('audio', 'decode')">Decode</button>
+            </div>
+
+            <div id="audio-encode-tab" class="sub-tab-content active">
+                <div class="input-group">
+                    <label class="label">Audio File (WAV/MP3/OGG)</label>
+                    <input type="file" accept="audio/*" id="audio-file-encode" class="file-input">
+                </div>
+                <div class="input-group">
+                    <label class="label">Message</label>
+                    <textarea id="audio-message" placeholder="Enter your message to hide"></textarea>
+                </div>
+                <div class="input-group">
+                    <label class="label">Output Format</label>
+                    <select id="audio-format" class="file-input">
+                        <option value="wav">WAV</option>
+                        <option value="mp3">MP3</option>
+                        <option value="ogg">OGG</option>
+                    </select>
+                </div>
+                <div class="preview-container">
+                    <audio id="audio-preview-encode" controls style="display: none;"></audio>
+                </div>
+                <div class="button-group">
+                    <button class="button" onclick="encodeAudio()">Encode</button>
+                </div>
+                <div id="audio-encode-result" class="result"></div>
+            </div>
+
+            <div id="audio-decode-tab" class="sub-tab-content">
+                <div class="input-group">
+                    <label class="label">Encoded Audio</label>
+                    <input type="file" accept="audio/*" id="audio-file-decode" class="file-input">
+                </div>
+                <div class="preview-container">
+                    <audio id="audio-preview-decode" controls style="display: none;"></audio>
+                </div>
+                <div class="button-group">
+                    <button class="button" onclick="decodeAudio()">Decode</button>
+                </div>
+                <div id="audio-decode-result" class="result"></div>
             </div>
         </div>
     </div>
@@ -464,6 +511,100 @@
                 }
             });
         }
+
+        // Audio file preview functionality
+function setupAudioPreview(inputId, previewId) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+
+    input.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            preview.src = url;
+            preview.style.display = 'block';
+        }
+    });
+}
+
+// Set up audio preview for encode and decode
+setupAudioPreview('audio-file-encode', 'audio-preview-encode');
+setupAudioPreview('audio-file-decode', 'audio-preview-decode');
+
+// Audio Steganography Functions
+async function encodeAudio() {
+    const audioFile = document.getElementById('audio-file-encode').files[0];
+    const message = document.getElementById('audio-message').value;
+    const format = document.getElementById('audio-format').value;
+
+    if (!audioFile || !message) {
+        showResult('audio-encode-result', 'Please provide both audio file and message', true);
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('audio', audioFile);
+    formData.append('message', message);
+    formData.append('format', format);
+
+    try {
+        const response = await fetch('/encode_audio', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+
+            // Create download link
+            const resultMessage = `
+                <div>Audio encoded successfully!</div>
+                <div style="margin-top: 10px;">
+                    <a href="${url}" download="encoded_audio.${format}" class="download-link">
+                        Download Encoded Audio
+                    </a>
+                </div>
+            `;
+            const resultDiv = document.getElementById('audio-encode-result');
+            resultDiv.innerHTML = resultMessage;
+            resultDiv.className = 'result success';
+        } else {
+            const data = await response.json();
+            showResult('audio-encode-result', data.error || 'Encoding failed', true);
+        }
+    } catch (error) {
+        showResult('audio-encode-result', 'An error occurred during encoding: ' + error.message, true);
+    }
+}
+
+async function decodeAudio() {
+    const audioFile = document.getElementById('audio-file-decode').files[0];
+
+    if (!audioFile) {
+        showResult('audio-decode-result', 'Please provide an audio file', true);
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('audio', audioFile);
+
+    try {
+        const response = await fetch('/decode_audio', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showResult('audio-decode-result', `Decoded Message: ${data.message}`);
+        } else {
+            showResult('audio-decode-result', data.error, true);
+        }
+    } catch (error) {
+        showResult('audio-decode-result', 'An error occurred during decoding: ' + error.message, true);
+    }
+}
 
         // Set up preview for carrier file and hide file
         document.getElementById('carrier-file-encode').addEventListener('change', function(e) {
@@ -539,7 +680,7 @@
 
                 const data = await response.json();
                 if (response.ok) {
-                    showResult('emoji-decode-result', ${data.result}`);
+                    showResult('emoji-decode-result', `Decoded Message: ${data.result}`);
                 } else {
                     showResult('emoji-result', data.error, true);
                 }
@@ -622,7 +763,7 @@
 
                 const data = await response.json();
                 if (response.ok) {
-                    showResult('image-decode-result',  ${data.message}`);
+                    showResult('image-decode-result', `Decoded Message: ${data.message}`);
                 } else {
                     showResult('image-decode-result', data.error, true);
                 }
