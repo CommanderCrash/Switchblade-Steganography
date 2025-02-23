@@ -13,8 +13,6 @@ import os
 import cv2
 import logging
 import time
-import wave
-import subprocess
 from werkzeug.utils import secure_filename
 import traceback
 
@@ -200,27 +198,27 @@ class LSBSteg:
         self.curheight = 0
         self.curchan = 0
 
-    def put_binary_value(self, bits):
+    def put_binary_value(self, bits): #Put the bits in the image
         for c in bits:
-            val = list(self.image[self.curheight,self.curwidth])
+            val = list(self.image[self.curheight,self.curwidth]) #Get the pixel value as a list
             if int(c) == 1:
-                val[self.curchan] = int(val[self.curchan]) | self.maskONE
+                val[self.curchan] = int(val[self.curchan]) | self.maskONE #OR with maskONE
             else:
-                val[self.curchan] = int(val[self.curchan]) & self.maskZERO
+                val[self.curchan] = int(val[self.curchan]) & self.maskZERO #AND with maskZERO
 
             self.image[self.curheight,self.curwidth] = tuple(val)
-            self.next_slot()
+            self.next_slot() #Move "cursor" to the next space
 
-    def next_slot(self):
-        if self.curchan == self.nbchannels-1:
+    def next_slot(self):#Move to the next slot were information can be taken or put
+        if self.curchan == self.nbchannels-1: #Next Space is the following channel
             self.curchan = 0
-            if self.curwidth == self.width-1:
+            if self.curwidth == self.width-1: #Or the first channel of the next pixel of the same line
                 self.curwidth = 0
-                if self.curheight == self.height-1:
+                if self.curheight == self.height-1:#Or the first channel of the first pixel of the next line
                     self.curheight = 0
-                    if self.maskONE == 128:
+                    if self.maskONE == 128: #Mask 1000000, so the last mask
                         raise Exception("No available slot remaining (image filled)")
-                    else:
+                    else: #Or instead of using the first bit start using the second and so on..
                         self.maskONE = self.maskONEValues.pop(0)
                         self.maskZERO = self.maskZEROValues.pop(0)
                 else:
@@ -230,7 +228,7 @@ class LSBSteg:
         else:
             self.curchan +=1
 
-    def read_bit(self):
+    def read_bit(self): #Read a single bit in the image
         val = self.image[self.curheight,self.curwidth][self.curchan]
         val = int(val) & self.maskONE
         self.next_slot()
@@ -242,7 +240,7 @@ class LSBSteg:
     def read_byte(self):
         return self.read_bits(8)
 
-    def read_bits(self, nb):
+    def read_bits(self, nb): #Read the given number of bits
         bits = ""
         for i in range(nb):
             bits += self.read_bit()
@@ -251,7 +249,7 @@ class LSBSteg:
     def byteValue(self, val):
         return self.binary_value(val, 8)
 
-    def binary_value(self, val, bitsize):
+    def binary_value(self, val, bitsize): #Return the binary value of an int as a byte
         binval = bin(val)[2:]
         if len(binval) > bitsize:
             raise Exception("binary value larger than the expected size")
@@ -261,22 +259,22 @@ class LSBSteg:
 
     def encode_text(self, txt):
         l = len(txt)
-        binl = self.binary_value(l, 16)
-        self.put_binary_value(binl)
-        for char in txt:
+        binl = self.binary_value(l, 16) #Length coded on 2 bytes so the text size can be up to 65536 bytes long
+        self.put_binary_value(binl) #Put text length coded on 4 bytes
+        for char in txt: #And put all the chars
             c = ord(char)
             self.put_binary_value(self.byteValue(c))
         return self.image
 
     def decode_text(self):
-        ls = self.read_bits(16)
+        ls = self.read_bits(16) #Read the text size in bytes
         l = int(ls,2)
         i = 0
         unhideTxt = ""
-        while i < l:
-            tmp = self.read_byte()
+        while i < l: #Read all bytes of the text
+            tmp = self.read_byte() #So one byte
             i += 1
-            unhideTxt += chr(int(tmp,2))
+            unhideTxt += chr(int(tmp,2)) #Every chars concatenated to str
         return unhideTxt
 
     def encode_image(self, imtohide):
@@ -284,11 +282,11 @@ class LSBSteg:
         h = imtohide.shape[0]
         if self.width*self.height*self.nbchannels < w*h*imtohide.shape[2]:
             raise Exception("Carrier image not big enough to hold all the data to steganography")
-        binw = self.binary_value(w, 16)
+        binw = self.binary_value(w, 16) #Width coded on 2 bytes so width up to 65536
         binh = self.binary_value(h, 16)
-        self.put_binary_value(binw)
-        self.put_binary_value(binh)
-        for h in range(imtohide.shape[0]):
+        self.put_binary_value(binw) #Put width
+        self.put_binary_value(binh) #Put height
+        for h in range(imtohide.shape[0]): #Iterate over the whole image to put every pixel values
             for w in range(imtohide.shape[1]):
                 for chan in range(imtohide.shape[2]):
                     val = imtohide[h,w][chan]
@@ -296,14 +294,14 @@ class LSBSteg:
         return self.image
 
     def decode_image(self):
-        width = int(self.read_bits(16),2)
+        width = int(self.read_bits(16),2) #Read 16bits and convert it in int
         height = int(self.read_bits(16),2)
-        unhideimg = np.zeros((height,width,3), np.uint8)
+        unhideimg = np.zeros((height,width,3), np.uint8) #Create an image in which we will put all the pixels read
         for h in range(height):
             for w in range(width):
                 for chan in range(unhideimg.shape[2]):
                     val = list(unhideimg[h,w])
-                    val[chan] = int(self.read_byte(),2)
+                    val[chan] = int(self.read_byte(),2) #Read the value
                     unhideimg[h,w] = tuple(val)
         return unhideimg
 
@@ -313,7 +311,7 @@ class LSBSteg:
             raise Exception("Carrier image not big enough to hold all the data to steganography")
         self.put_binary_value(self.binary_value(l, 64))
         for byte in data:
-            byte = byte if isinstance(byte, int) else ord(byte)
+            byte = byte if isinstance(byte, int) else ord(byte) # Compat py2/py3
             self.put_binary_value(self.byteValue(byte))
         return self.image
 
@@ -323,130 +321,6 @@ class LSBSteg:
         for i in range(l):
             output += bytearray([int(self.read_byte(),2)])
         return output
-
-# Audio steganography class
-class AudioSteg:
-    @staticmethod
-    def encode_message(audio_data, message):
-        try:
-            logger.info("Opening WAV data...")
-            with wave.open(io.BytesIO(audio_data), 'rb') as wav:
-                logger.info("Reading frames...")
-                frames = bytearray(wav.readframes(wav.getnframes()))
-
-                logger.info(f"Frame size: {len(frames)} bytes")
-                pad_length = (len(frames) - (len(message) * 8 * 8)) // 8
-                logger.info(f"Padding length: {pad_length}")
-                padded_message = message + '#' * pad_length
-
-                logger.info("Converting message to bits...")
-                bits = []
-                for char in padded_message:
-                    binary = format(ord(char), '08b')
-                    bits.extend(int(b) for b in binary)
-
-                logger.info("Encoding bits into audio...")
-                for i in range(len(bits)):
-                    frames[i] = (frames[i] & 254) | bits[i]
-
-                logger.info("Creating output buffer...")
-                output_buffer = io.BytesIO()
-                with wave.open(output_buffer, 'wb') as output:
-                    output.setparams(wav.getparams())
-                    output.writeframes(bytes(frames))
-
-                logger.info("Returning encoded data...")
-                return output_buffer.getvalue()
-        except Exception as e:
-            logger.error(f"Detailed audio encoding error: {str(e)}")
-            logger.error(f"Error type: {type(e)}")
-            import traceback
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            raise
-
-    @staticmethod
-    def decode_message(audio_data):
-        try:
-            with wave.open(io.BytesIO(audio_data), 'rb') as wav:
-                frames = bytearray(wav.readframes(wav.getnframes()))
-                bits = [frame & 1 for frame in frames]
-
-                message = ""
-                for i in range(0, len(bits), 8):
-                    byte_bits = bits[i:i+8]
-                    if len(byte_bits) < 8:
-                        break
-                    char = chr(int(''.join(map(str, byte_bits)), 2))
-                    if char == '#':
-                        break
-                    message += char
-
-                return message
-        except Exception as e:
-            logger.error(f"Audio decoding error: {e}")
-            raise
-
-    @staticmethod
-    def convert_to_wav(input_data, input_format):
-        try:
-            logger.info(f"Starting conversion from {input_format} to WAV")
-            temp_input = os.path.join(app.config['UPLOAD_FOLDER'], f'temp_input.{input_format}')
-            temp_output = os.path.join(app.config['UPLOAD_FOLDER'], 'temp_output.wav')
-
-            logger.info(f"Writing input file to: {temp_input}")
-            with open(temp_input, 'wb') as f:
-                f.write(input_data)
-
-            logger.info("Running ffmpeg conversion...")
-            process = subprocess.run([
-                'ffmpeg', '-i', temp_input,
-                '-acodec', 'pcm_s16le',
-                '-ar', '44100',
-                temp_output
-            ], check=True, capture_output=True, text=True)
-
-            logger.info("Reading converted WAV file")
-            with open(temp_output, 'rb') as f:
-                wav_data = f.read()
-
-            logger.info("Cleaning up temporary files")
-            os.remove(temp_input)
-            os.remove(temp_output)
-
-            logger.info(f"Conversion successful. WAV size: {len(wav_data)} bytes")
-            return wav_data
-        except subprocess.CalledProcessError as e:
-            logger.error(f"FFmpeg error: {e.stderr}")
-            raise Exception(f"FFmpeg conversion failed: {e.stderr}")
-        except Exception as e:
-            logger.error(f"General conversion error: {str(e)}")
-            raise
-
-    @staticmethod
-    def convert_from_wav(input_data, output_format):
-        try:
-            temp_input = os.path.join(app.config['UPLOAD_FOLDER'], 'temp_input.wav')
-            temp_output = os.path.join(app.config['UPLOAD_FOLDER'], f'temp_output.{output_format}')
-
-            with open(temp_input, 'wb') as f:
-                f.write(input_data)
-
-            subprocess.run([
-                'ffmpeg', '-i', temp_input,
-                temp_output
-            ], check=True)
-
-            with open(temp_output, 'rb') as f:
-                output_data = f.read()
-
-            os.remove(temp_input)
-            os.remove(temp_output)
-
-            return output_data
-        except Exception as e:
-            logger.error(f"Audio conversion error: {e}")
-            raise
-
 # Routes
 @app.route('/')
 def index():
@@ -549,6 +423,7 @@ def encode_file():
         carrier_file = request.files['carrier']
         file_to_hide = request.files['file']
 
+        # Check if the file is a GIF
         if carrier_file.filename.lower().endswith('.gif'):
             return jsonify({'error': 'GIF files are not supported as carrier images. Please use PNG or JPG files.'}), 400
 
@@ -559,6 +434,7 @@ def encode_file():
 
         carrier_image = cv2.imread(carrier_path)
 
+        # Add check for successful image loading
         if carrier_image is None:
             return jsonify({'error': 'Failed to load carrier image. Please ensure it is a valid PNG or JPG file.'}), 400
 
@@ -643,96 +519,6 @@ def download(filename):
     except Exception as e:
         logger.error(f"Download error: {str(e)}")
         return jsonify({'error': 'Download failed'}), 500
-
-# Audio steganography routes
-@app.route('/encode_audio', methods=['POST'])
-def encode_audio():
-    try:
-        logger.info("Starting audio encoding process...")
-
-        if 'audio' not in request.files:
-            logger.error("No audio file provided")
-            return jsonify({'error': 'No audio file uploaded'}), 400
-
-        audio_file = request.files['audio']
-        message = request.form.get('message', '')
-        output_format = request.form.get('format', 'wav')
-
-        logger.info(f"Processing file: {audio_file.filename}")
-        logger.info(f"Output format: {output_format}")
-
-        if not message:
-            logger.error("No message provided")
-            return jsonify({'error': 'No message provided'}), 400
-
-        # Read audio file
-        audio_buffer = audio_file.read()
-        logger.info(f"Read audio buffer of size: {len(audio_buffer)} bytes")
-
-        # Convert to WAV if needed
-        if not audio_file.filename.lower().endswith('.wav'):
-            logger.info("Converting to WAV format...")
-            try:
-                audio_buffer = AudioSteg.convert_to_wav(
-                    audio_buffer,
-                    audio_file.filename.split('.')[-1]
-                )
-                logger.info("WAV conversion successful")
-            except Exception as e:
-                logger.error(f"WAV conversion failed: {str(e)}")
-                return jsonify({'error': f'WAV conversion failed: {str(e)}'}), 400
-
-        # Encode message
-        try:
-            logger.info("Encoding message into audio...")
-            encoded_buffer = AudioSteg.encode_message(audio_buffer, message)
-            logger.info("Message encoding successful")
-        except Exception as e:
-            logger.error(f"Message encoding failed: {str(e)}")
-            return jsonify({'error': f'Message encoding failed: {str(e)}'}), 400
-
-        # Convert back to original format if needed
-        if output_format != 'wav':
-            logger.info(f"Converting to output format: {output_format}")
-            try:
-                encoded_buffer = AudioSteg.convert_from_wav(encoded_buffer, output_format)
-                logger.info("Output format conversion successful")
-            except Exception as e:
-                logger.error(f"Output format conversion failed: {str(e)}")
-                return jsonify({'error': f'Output format conversion failed: {str(e)}'}), 400
-
-        logger.info("Sending encoded file back to client")
-        return send_file(
-            io.BytesIO(encoded_buffer),
-            mimetype=f'audio/{output_format}',
-            as_attachment=True,
-            download_name=f'encoded_audio.{output_format}'
-        )
-
-    except Exception as e:
-        logger.error(f"Unexpected error in encode_audio: {str(e)}")
-        return jsonify({'error': str(e)}), 400
-
-@app.route('/decode_audio', methods=['POST'])
-def decode_audio():
-    try:
-        if 'audio' not in request.files:
-            return jsonify({'error': 'No audio file uploaded'}), 400
-
-        audio_file = request.files['audio']
-        audio_buffer = audio_file.read()
-
-        if not audio_file.filename.lower().endswith('.wav'):
-            audio_buffer = AudioSteg.convert_to_wav(
-                audio_buffer,
-                audio_file.filename.split('.')[-1]
-            )
-
-        message = AudioSteg.decode_message(audio_buffer)
-        return jsonify({'message': message})
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5353)
