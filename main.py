@@ -506,11 +506,15 @@ def decode_file():
         decoded_data = steg.decode_binary()
 
         timestamp = int(time.time())
-        output_filename = f'decoded_file_{timestamp}'
+        # Create a unique filename with timestamp
+        output_filename = f'decoded_file_{timestamp}.bin'  # Adding .bin extension as a default
         output_path = os.path.join(app.config['UPLOAD_FOLDER'], output_filename)
 
         with open(output_path, 'wb') as f:
             f.write(decoded_data)
+
+        # Log success for debugging
+        logger.debug(f"File decoded successfully to: {output_path}")
 
         return jsonify({
             'success': True,
@@ -519,6 +523,7 @@ def decode_file():
         })
     except Exception as e:
         logger.error(f"File decoding error: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/download/<filename>')
@@ -526,17 +531,23 @@ def download(filename):
     try:
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         if not os.path.exists(file_path):
+            logger.error(f"Download failed: File not found at {file_path}")
             return jsonify({'error': 'File not found'}), 404
 
+        # Add better logging
+        logger.debug(f"Attempting to download file: {file_path}")
+
+        # For newer versions of Flask
         return send_file(
             file_path,
             as_attachment=True,
-            download_name=filename,
+            download_name=filename,  # Use download_name for newer Flask versions
             mimetype='application/octet-stream'
         )
     except Exception as e:
         logger.error(f"Download error: {str(e)}")
-        return jsonify({'error': 'Download failed'}), 500
+        logger.error(traceback.format_exc())  # Add traceback for more detailed error info
+        return jsonify({'error': f'Download failed: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5353)
