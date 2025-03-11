@@ -20,7 +20,7 @@ import multiprocessing
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = None  # No file size limit
-app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['UPLOAD_FOLDER'] = os.path.abspath('uploads')
 app.secret_key = os.urandom(24)
 
 # Ensure upload directory exists
@@ -541,6 +541,10 @@ def decode_file_task(image_path, task_id, result_filename):
 
             # Save the decoded file
             output_path = os.path.join(app.config['UPLOAD_FOLDER'], result_filename)
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            with open(output_path, 'wb') as f:
+                f.write(decoded_data)
 
             with open(output_path, 'wb') as f:
                 f.write(decoded_data)
@@ -874,14 +878,17 @@ def task_status(task_id):
 def download(filename):
     try:
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+        # Add debug logging
+        logger.debug(f"Attempting to download file: {filename}")
+        logger.debug(f"Full file path: {file_path}")
+        logger.debug(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
+        logger.debug(f"File exists: {os.path.exists(file_path)}")
+
         if not os.path.exists(file_path):
             logger.error(f"Download failed: File not found at {file_path}")
-            return jsonify({'error': 'File not found'}), 404
+            return jsonify({'error': f'File not found at {file_path}'}), 404
 
-        # Add better logging
-        logger.debug(f"Attempting to download file: {file_path}")
-
-        # Use a more robust approach to sending files
         try:
             return send_file(
                 file_path,
@@ -899,8 +906,9 @@ def download(filename):
             )
     except Exception as e:
         logger.error(f"Download error: {str(e)}")
-        logger.error(traceback.format_exc())  # Add traceback for more detailed error info
+        logger.error(traceback.format_exc())
         return jsonify({'error': f'Download failed: {str(e)}'}), 500
+
 
 # Add cleanup function to periodically remove old files
 def cleanup_old_files():
